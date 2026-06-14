@@ -1,0 +1,13 @@
+# Smart Home Energy Monitoring System — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# MQTT client (Phase 7 — cloud dashboard publish)
+paho-mqtt>=1.6.1
+
+# PDF report generation (Phase 12)
+reportlab>=4.0.0
+
+# Optional — richer data analysis / plotting
+# Uncomment if you want to generate charts from CSV:
+# pandas>=2.0.0
+# matplotlib>=3.7.0
