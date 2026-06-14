@@ -1,7 +1,5 @@
 # Smart Home Energy Monitoring System
 
-# ⚡ Smart Home Energy Monitoring System
-
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![ESP32](https://img.shields.io/badge/Hardware-ESP32-orange?logo=espressif)
 ![IoT](https://img.shields.io/badge/Project-IoT%20Energy%20Monitoring-green)
