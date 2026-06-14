@@ -1,0 +1,72 @@
+[
+    {
+        "timestamp": "2025-07-17T19:20:01",
+        "mode": "normal",
+        "voltage_v": 229.7,
+        "current_a": 0.83,
+        "apparent_w": 190.5,
+        "true_w": 191.2,
+        "wh_interval": 0.0529,
+        "wh_cumulative": 0.0529,
+        "kwh_cumulative": 0.000053,
+        "cost_rs": 0.0004,
+        "alert_active": false,
+        "alert_messages": ""
+    },
+    {
+        "timestamp": "2025-07-17T19:20:02",
+        "mode": "normal",
+        "voltage_v": 231.4,
+        "current_a": 0.84,
+        "apparent_w": 194.4,
+        "true_w": 193.8,
+        "wh_interval": 0.0540,
+        "wh_cumulative": 0.1069,
+        "kwh_cumulative": 0.000107,
+        "cost_rs": 0.0009,
+        "alert_active": false,
+        "alert_messages": ""
+    },
+    {
+        "timestamp": "2025-07-17T19:20:03",
+        "mode": "normal",
+        "voltage_v": 228.9,
+        "current_a": 0.85,
+        "apparent_w": 194.6,
+        "true_w": 195.2,
+        "wh_interval": 0.0541,
+        "wh_cumulative": 0.1610,
+        "kwh_cumulative": 0.000161,
+        "cost_rs": 0.0013,
+        "alert_active": false,
+        "alert_messages": ""
+    },
+    {
+        "timestamp": "2025-07-17T19:20:04",
+        "mode": "normal",
+        "voltage_v": 230.8,
+        "current_a": 0.82,
+        "apparent_w": 189.3,
+        "true_w": 188.7,
+        "wh_interval": 0.0526,
+        "wh_cumulative": 0.2136,
+        "kwh_cumulative": 0.000214,
+        "cost_rs": 0.0017,
+        "alert_active": false,
+        "alert_messages": ""
+    },
+    {
+        "timestamp": "2025-07-17T19:20:05",
+        "mode": "normal",
+        "voltage_v": 232.0,
+        "current_a": 0.84,
+        "apparent_w": 194.9,
+        "true_w": 195.5,
+        "wh_interval": 0.0541,
+        "wh_cumulative": 0.2677,
+        "kwh_cumulative": 0.000268,
+        "cost_rs": 0.0021,
+        "alert_active": false,
+        "alert_messages": ""
+    }
+]
