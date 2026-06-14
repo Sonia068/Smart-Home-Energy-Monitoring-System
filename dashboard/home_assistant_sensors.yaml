@@ -1,0 +1,123 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Home Assistant — MQTT Sensor Configuration
+# Phase 5 & 8: Entity setup + Alert automations
+#
+# Add this to your configuration.yaml (or split into separate YAML includes)
+# Restart HA after saving.
+# ─────────────────────────────────────────────────────────────────────────────
+
+mqtt:
+  sensor:
+    # ── Circuit 1: Current ───────────────────────────────────────────────────
+    - name: "Circuit 1 Current"
+      unique_id: "energy_node1_c1_current"
+      state_topic: "home/energy/node1/c1"
+      unit_of_measurement: "A"
+      device_class: current
+      value_template: "{{ value_json.Irms | float | round(3) }}"
+      icon: mdi:current-ac
+
+    # ── Circuit 1: Voltage ───────────────────────────────────────────────────
+    - name: "Circuit 1 Voltage"
+      unique_id: "energy_node1_c1_voltage"
+      state_topic: "home/energy/node1/c1"
+      unit_of_measurement: "V"
+      device_class: voltage
+      value_template: "{{ value_json.voltage | float | round(1) }}"
+      icon: mdi:lightning-bolt
+
+    # ── Circuit 1: Apparent Power (VA) ───────────────────────────────────────
+    - name: "Circuit 1 Power (VA)"
+      unique_id: "energy_node1_c1_power"
+      state_topic: "home/energy/node1/c1"
+      unit_of_measurement: "VA"
+      device_class: apparent_power
+      value_template: "{{ value_json.apparent_w | float | round(1) }}"
+      icon: mdi:flash
+
+    # ── Circuit 1: Cumulative Energy (Wh) ────────────────────────────────────
+    - name: "Circuit 1 Energy (Wh)"
+      unique_id: "energy_node1_c1_energy_wh"
+      state_topic: "home/energy/node1/c1"
+      unit_of_measurement: "Wh"
+      device_class: energy
+      state_class: total_increasing
+      value_template: "{{ value_json.wh_total | float | round(3) }}"
+      icon: mdi:meter-electric
+
+    # ── Circuit 1: Cost (₹) ──────────────────────────────────────────────────
+    - name: "Circuit 1 Cost (₹)"
+      unique_id: "energy_node1_c1_cost"
+      state_topic: "home/energy/node1/c1"
+      unit_of_measurement: "₹"
+      value_template: "{{ value_json.cost_rs | float | round(4) }}"
+      icon: mdi:currency-inr
+
+    # ── Alert Status ─────────────────────────────────────────────────────────
+    - name: "Circuit 1 Alert"
+      unique_id: "energy_node1_c1_alert"
+      state_topic: "home/energy/node1/c1"
+      value_template: >
+        {% if value_json.alert %}ALERT{% else %}OK{% endif %}
+      icon: mdi:bell-alert
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTOMATIONS  (Phase 8 — Alert Generation)
+# ─────────────────────────────────────────────────────────────────────────────
+automation:
+
+  # ── 1. Overload Alert ───────────────────────────────────────────────────────
+  - alias: "Energy: Overload Alert"
+    description: "Notify when circuit power exceeds 2000 VA"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.circuit_1_power_va
+        above: 2000
+        for: "00:00:30"   # sustained for 30 s to avoid transient spikes
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "⚡ Energy Overload Alert"
+          message: >
+            Circuit 1 power is {{ states('sensor.circuit_1_power_va') }} VA —
+            exceeds 2000 VA limit. Check appliances.
+
+  # ── 2. High Standby Power Overnight ─────────────────────────────────────────
+  - alias: "Energy: High Standby Overnight"
+    description: "Alert if >120 VA during 00:00–05:00 (standby audit)"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.circuit_1_power_va
+        above: 120
+        for: "00:30:00"
+    condition:
+      - condition: time
+        after: "00:00:00"
+        before: "05:00:00"
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "🌙 Standby Power Alert"
+          message: >
+            Standby load {{ states('sensor.circuit_1_power_va') }} VA >120 VA
+            for 30 min. Check chargers and TV boxes.
+
+  # ── 3. Appliance Cycle Complete (e.g. washing machine) ──────────────────────
+  - alias: "Energy: Appliance Cycle Complete"
+    description: "Detect when a large load drops below 5 VA (cycle done)"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.circuit_1_power_va
+        below: 5
+        for: "00:03:00"
+    condition:
+      # Only meaningful if power was high before (washing-machine-like cycle)
+      - condition: template
+        value_template: >
+          {{ states('sensor.circuit_1_power_va') | float < 5 }}
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "✅ Appliance Cycle Complete"
+          message: "Power dropped to 0 W — your appliance has finished its cycle."

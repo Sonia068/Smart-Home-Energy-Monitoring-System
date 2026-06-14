@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Compose — Full Energy Monitoring Stack
+# Phase 10 — Enclosure, OTA, Deployment
+#
+# Services:
+#   mosquitto   — MQTT broker  (port 1883)
+#   influxdb    — Time-series DB  (port 8086)
+#   grafana     — Dashboard  (port 3000)
+#   telegraf    — MQTT→InfluxDB bridge
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#   docker compose down
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "3.8"
+
+services:
+
+  # ── MQTT Broker ─────────────────────────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: energy_mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"    # WebSocket (optional for browser clients)
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    restart: unless-stopped
+
+  # ── Time-Series Database ─────────────────────────────────────────────────────
+  influxdb:
+    image: influxdb:2.7
+    container_name: energy_influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE:        setup
+      DOCKER_INFLUXDB_INIT_USERNAME:    admin
+      DOCKER_INFLUXDB_INIT_PASSWORD:    adminpassword   # ← change in production
+      DOCKER_INFLUXDB_INIT_ORG:         home
+      DOCKER_INFLUXDB_INIT_BUCKET:      energy
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-token  # ← change in production
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    restart: unless-stopped
+
+  # ── Dashboard ────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: energy_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin   # ← change in production
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  # ── Telegraf (MQTT → InfluxDB bridge) ───────────────────────────────────────
+  telegraf:
+    image: telegraf:1.30
+    container_name: energy_telegraf
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: unless-stopped
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  influxdb_data:
+  influxdb_config:
+  grafana_data:

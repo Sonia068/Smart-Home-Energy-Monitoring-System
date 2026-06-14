@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Home Energy Monitoring Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; }
+  header { background: #1a1a2e; color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+  .badge { font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+  .badge-live { background: #d1fae5; color: #065f46; }
+  .badge-alert { background: #fee2e2; color: #991b1b; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .toolbar label { font-size: 13px; color: #555; }
+  .toolbar select, .toolbar button { font-size: 13px; padding: 7px 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #1a1a2e; }
+  .toolbar button { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+  .toolbar button:hover { background: #2d2d44; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px 18px; border: 1px solid #e5e7eb; }
+  .card-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .card-value { font-size: 26px; font-weight: 600; color: #1a1a2e; }
+  .card-unit { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .card-alert { border-color: #fca5a5; background: #fff5f5; }
+  .card-alert .card-value { color: #dc2626; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .panel { background: #fff; border-radius: 12px; padding: 18px 20px; border: 1px solid #e5e7eb; margin-bottom: 16px; }
+  .panel-title { font-size: 14px; font-weight: 500; color: #1a1a2e; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+  .legend span { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #6b7280; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .alert-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .alert-row:last-child { border-bottom: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-red { background: #ef4444; }
+  .dot-green { background: #22c55e; }
+  .dot-amber { background: #f59e0b; }
+  .alert-time { color: #9ca3af; min-width: 75px; font-size: 11px; font-family: monospace; }
+  .alert-msg { flex: 1; color: #374151; }
+  .mode-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-normal  { background: #dbeafe; color: #1d4ed8; }
+  .tag-high    { background: #fef3c7; color: #b45309; }
+  .tag-overload{ background: #fee2e2; color: #b91c1c; }
+  .tag-multi   { background: #ede9fe; color: #7c3aed; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th { text-align: left; padding: 8px 12px; background: #f9fafb; color: #6b7280; font-weight: 500; border-bottom: 1px solid #e5e7eb; }
+  .summary-table td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  footer { text-align: center; padding: 20px; font-size: 12px; color: #9ca3af; margin-top: 10px; }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Smart Home Energy Monitor</h1>
+  <span class="badge badge-live" id="status-badge">● Live Data</span>
+</header>
+
+<div class="container">
+
+  <div class="toolbar">
+    <label>Filter by mode:</label>
+    <select id="mode-filter">
+      <option value="all">All modes</option>
+      <option value="normal">Normal</option>
+      <option value="high">High</option>
+      <option value="overload">Overload</option>
+      <option value="multi">Multi</option>
+    </select>
+    <button onclick="exportCSV()">⬇ Export CSV</button>
+    <span id="row-count" style="font-size:13px;color:#6b7280;margin-left:auto"></span>
+  </div>
+
+  <!-- METRIC CARDS -->
+  <div class="cards" id="cards">
+    <div class="card"><div class="card-label">⚡ Power</div><div class="card-value" id="m-power">—</div><div class="card-unit">Watts (VA)</div></div>
+    <div class="card"><div class="card-label">〜 Current</div><div class="card-value" id="m-current">—</div><div class="card-unit">Amperes</div></div>
+    <div class="card"><div class="card-label">🔌 Voltage</div><div class="card-value" id="m-voltage">—</div><div class="card-unit">Volts</div></div>
+    <div class="card"><div class="card-label">📈 Energy</div><div class="card-value" id="m-energy">—</div><div class="card-unit">kWh cumulative</div></div>
+    <div class="card"><div class="card-label">₹ Cost</div><div class="card-value" id="m-cost">—</div><div class="card-unit">@ ₹8/kWh</div></div>
+    <div class="card" id="alert-card"><div class="card-label">🔔 Alerts</div><div class="card-value" id="m-alerts">—</div><div class="card-unit">events fired</div></div>
+  </div>
+
+  <!-- POWER CHART -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>Power Consumption Over Time (W)</span>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#3b82f6"></span>Normal</span>
+        <span><span class="legend-dot" style="background:#f59e0b"></span>High</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span>Overload</span>
+        <span><span class="legend-dot" style="background:#8b5cf6"></span>Multi</span>
+      </div>
+    </div>
+    <div style="position:relative;height:220px">
+      <canvas id="powerChart" role="img" aria-label="Power consumption in watts over time">Power chart</canvas>
+    </div>
+  </div>
+
+  <!-- VOLTAGE + COST CHARTS -->
+  <div class="grid2">
+    <div class="panel" style="margin-bottom:0">
+      <div class="panel-title">Voltage Readings (V)</div>
+      <div style="position:relative;height:170px">
+        <canvas id="voltChart" role="img" aria-label="Voltage in volts over time">Voltage chart</canvas>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:0">
+      <div class="panel-title">Cumulative Cost (₹)</div>
+      <div style="position:relative;height:170px">
+        <canvas id="costChart" role="img" aria-label="Cumulative electricity cost">Cost chart</canvas>
+      </div>
+    </div>
+  </div>
+  <div style="margin-bottom:16px"></div>
+
+  <!-- MODE COMPARISON -->
+  <div class="panel">
+    <div class="panel-title">Average Power by Mode (W)</div>
+    <div style="position:relative;height:160px">
+      <canvas id="modeChart" role="img" aria-label="Bar chart comparing average power per simulation mode">Mode chart</canvas>
+    </div>
+  </div>
+
+  <!-- SUMMARY TABLE -->
+  <div class="panel">
+    <div class="panel-title">Mode Summary Statistics</div>
+    <table class="summary-table" id="summary-table">
+      <thead><tr><th>Mode</th><th>Readings</th><th>Avg Power (W)</th><th>Peak Power (W)</th><th>Alerts</th><th>Total Cost (₹)</th></tr></thead>
+      <tbody id="summary-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ALERT LOG -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>🔴 Alert Log</span>
+      <span style="font-size:12px;color:#9ca3af" id="alert-count-label"></span>
+    </div>
+    <div id="alert-list"></div>
+  </div>
+
+</div>
+
+<footer>Smart Home Energy Monitoring System &nbsp;|&nbsp; IoT Course Project &nbsp;|&nbsp; Data from Python Simulation</footer>
+
+<script>
+let allData = [];
+
+const powerCtx = document.getElementById("powerChart");
+const voltCtx = document.getElementById("voltChart");
+const costCtx = document.getElementById("costChart");
+const modeCtx = document.getElementById("modeChart");
+
+const powerChart = new Chart(powerCtx, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "Power (W)",
+            data: [],
+            borderColor: "#3b82f6",
+            backgroundColor: "rgba(59,130,246,0.2)",
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+const voltChart = new Chart(voltCtx, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "Voltage",
+            data: [],
+            borderColor: "#10b981",
+            backgroundColor: "rgba(16,185,129,0.2)",
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+const costChart = new Chart(costCtx, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "Cost (₹)",
+            data: [],
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245,158,11,0.2)",
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+const modeChart = new Chart(modeCtx, {
+    type: "bar",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "Average Power (W)",
+            data: [],
+            backgroundColor: [
+                "#3b82f6",
+                "#f59e0b",
+                "#ef4444",
+                "#8b5cf6"
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+async function loadData() {
+    try {
+        const response = await fetch(
+            "../data/energy_data.json?t=" + Date.now()
+        );
+
+        allData = await response.json();
+
+        if (!allData.length) return;
+
+        updateDashboard();
+    }
+    catch (err) {
+        console.error("Cannot load JSON:", err);
+    }
+}
+
+function updateDashboard() {
+
+    const filter =
+        document.getElementById("mode-filter").value;
+
+    let data = allData;
+
+    if (filter !== "all") {
+        data = allData.filter(
+            d => d.mode === filter
+        );
+    }
+
+    if (!data.length) return;
+
+    document.getElementById("row-count").innerText =
+        `${data.length} readings`;
+
+    const latest = data[data.length - 1];
+
+    document.getElementById("m-power").innerText =
+        latest.apparent_w.toFixed(1);
+
+    document.getElementById("m-current").innerText =
+        latest.current_a.toFixed(2);
+
+    document.getElementById("m-voltage").innerText =
+        latest.voltage_v.toFixed(1);
+
+    document.getElementById("m-energy").innerText =
+        latest.kwh_cumulative.toFixed(4);
+
+    document.getElementById("m-cost").innerText =
+        latest.cost_rs.toFixed(4);
+
+    const alerts =
+        data.filter(d => d.alert_active).length;
+
+    document.getElementById("m-alerts").innerText =
+        alerts;
+
+    const alertCard =
+        document.getElementById("alert-card");
+
+    if (alerts > 0) {
+        alertCard.classList.add("card-alert");
+        document.getElementById("status-badge")
+            .className =
+            "badge badge-alert";
+        document.getElementById("status-badge")
+            .innerText =
+            "⚠ Alerts Present";
+    }
+    else {
+        alertCard.classList.remove("card-alert");
+        document.getElementById("status-badge")
+            .className =
+            "badge badge-live";
+        document.getElementById("status-badge")
+            .innerText =
+            "● Live Data";
+    }
+
+    const labels =
+        data.map(
+            d =>
+            new Date(d.timestamp)
+                .toLocaleTimeString()
+        );
+
+    powerChart.data.labels = labels;
+    powerChart.data.datasets[0].data =
+        data.map(d => d.apparent_w);
+    powerChart.update();
+
+    voltChart.data.labels = labels;
+    voltChart.data.datasets[0].data =
+        data.map(d => d.voltage_v);
+    voltChart.update();
+
+    costChart.data.labels = labels;
+    costChart.data.datasets[0].data =
+        data.map(d => d.cost_rs);
+    costChart.update();
+
+    const modes =
+        ["normal", "high", "overload", "multi"];
+
+    const averages = modes.map(mode => {
+        const rows =
+            allData.filter(d => d.mode === mode);
+
+        if (!rows.length) return 0;
+
+        const sum =
+            rows.reduce(
+                (a, b) =>
+                    a + b.apparent_w,
+                0
+            );
+
+        return (sum / rows.length)
+            .toFixed(1);
+    });
+
+    modeChart.data.labels = modes;
+    modeChart.data.datasets[0].data =
+        averages;
+    modeChart.update();
+
+    buildSummary();
+    buildAlerts();
+}
+
+function buildSummary() {
+
+    const body =
+        document.getElementById(
+            "summary-body"
+        );
+
+    body.innerHTML = "";
+
+    const modes =
+        ["normal", "high", "overload", "multi"];
+
+    modes.forEach(mode => {
+
+        const rows =
+            allData.filter(
+                d => d.mode === mode
+            );
+
+        if (!rows.length)
+            return;
+
+        const avg =
+            rows.reduce(
+                (a, b) =>
+                    a + b.apparent_w,
+                0
+            ) / rows.length;
+
+        const peak =
+            Math.max(
+                ...rows.map(
+                    r => r.apparent_w
+                )
+            );
+
+        const alerts =
+            rows.filter(
+                r =>
+                r.alert_active
+            ).length;
+
+        const cost =
+            rows[
+                rows.length - 1
+            ].cost_rs;
+
+        body.innerHTML += `
+        <tr>
+            <td>${mode}</td>
+            <td>${rows.length}</td>
+            <td>${avg.toFixed(1)}</td>
+            <td>${peak.toFixed(1)}</td>
+            <td>${alerts}</td>
+            <td>${cost.toFixed(4)}</td>
+        </tr>
+        `;
+    });
+}
+
+function buildAlerts() {
+
+    const div =
+        document.getElementById(
+            "alert-list"
+        );
+
+    div.innerHTML = "";
+
+    const alerts =
+        allData.filter(
+            d =>
+            d.alert_active
+        );
+
+    document.getElementById(
+        "alert-count-label"
+    ).innerText =
+        `${alerts.length} alerts`;
+
+    if (!alerts.length) {
+        div.innerHTML =
+            `<div class="alert-row">
+                <div class="dot dot-green"></div>
+                <div class="alert-msg">
+                    No alerts generated.
+                </div>
+            </div>`;
+        return;
+    }
+
+    alerts.reverse().forEach(a => {
+
+        div.innerHTML += `
+        <div class="alert-row">
+            <div class="dot dot-red"></div>
+            <div class="alert-time">
+                ${new Date(
+                    a.timestamp
+                ).toLocaleTimeString()}
+            </div>
+            <div class="alert-msg">
+                ${a.alert_messages}
+            </div>
+        </div>
+        `;
+    });
+}
+
+function exportCSV() {
+
+    if (!allData.length)
+        return;
+
+    const keys =
+        Object.keys(allData[0]);
+
+    let csv =
+        keys.join(",") + "\n";
+
+    allData.forEach(row => {
+        csv += keys.map(
+            k => row[k]
+        ).join(",") + "\n";
+    });
+
+    const blob =
+        new Blob(
+            [csv],
+            { type: "text/csv" }
+        );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+    a.download =
+        "energy_report.csv";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+document
+.getElementById("mode-filter")
+.addEventListener(
+    "change",
+    updateDashboard
+);
+
+loadData();
+setInterval(loadData, 1000);
+</script>
+
+</body>
+</html>
