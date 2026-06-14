@@ -31,7 +31,7 @@ Although no physical hardware is used during execution, the project includes com
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 SCT-013 Clamp
@@ -55,25 +55,25 @@ Python Simulation (no hardware needed):
 
 ---
 
-## 📊 Screenshots
+##  Screenshots
 
-### 🔌 Virtual Circuit Diagram (Wokwi)
+###  Virtual Circuit Diagram (Wokwi)
 
 ![Virtual Circuit](images/circuit.png)
 
-### 📈 Energy Analytics Dashboard
+### Energy Analytics Dashboard
 
 ![Dashboard](images/dashboard.png)
 
-### 📊 Power Consumption Graphs
+### Power Consumption Graphs
 
-![Graphs](images/graph.png)
+![Graphs](images/Graph.png)
 
-### ⚡ Running Simulation
+###  Running Simulation
 
 ![Simulation](images/simulation.png)
 
-## 📦 Components
+##  Components
 
 | Hardware                  | Purpose                             |
 | ------------------------- | ----------------------------------- |
@@ -317,7 +317,7 @@ Active Appliances:
 
 ---
 
-## 🚀 Execution Steps
+##  Execution Steps
 
 ### Install Dependencies
 
@@ -337,7 +337,7 @@ The simulator continuously updates:
 - energy_data.json
 - energy_log.csv
 
-## 📊 Energy Calculations
+##  Energy Calculations
 
 Power:
 
