@@ -59,7 +59,7 @@ Python Simulation (no hardware needed):
 
 ###  Virtual Circuit Diagram (Wokwi)
 
-![Virtual Circuit](images/circuit.png)
+![Virtual Circuit](images/Circuit.png)
 
 ### Energy Analytics Dashboard
 
